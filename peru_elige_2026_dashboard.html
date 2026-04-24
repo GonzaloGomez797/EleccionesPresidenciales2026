@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perú Elige 2026 — Dashboard Electoral</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --red: #D91023;
+    --bg: #f9f9f7;
+    --bg2: #f0f0ed;
+    --bg3: #e8e8e4;
+    --text: #1a1a1a;
+    --text2: #555;
+    --text3: #888;
+    --border: rgba(0,0,0,.12);
+    --border2: rgba(0,0,0,.22);
+    --warn-bg: #fff8e6;
+    --warn-border: #e6c84a;
+    --warn-text: #7a5a00;
+    --success-bg: #edf7f0;
+    --success-border: #5aad78;
+    --success-text: #1a6636;
+    --danger-bg: #fef0f0;
+    --danger-border: #e87878;
+    --danger-text: #a02020;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14141a;
+      --bg2: #1e1e28;
+      --bg3: #252530;
+      --text: #f0f0f0;
+      --text2: #aaa;
+      --text3: #666;
+      --border: rgba(255,255,255,.10);
+      --border2: rgba(255,255,255,.18);
+      --warn-bg: #2a2310;
+      --warn-border: #9a7a10;
+      --warn-text: #f0c040;
+      --success-bg: #0e2318;
+      --success-border: #2a7a4a;
+      --success-text: #60d080;
+      --danger-bg: #220e0e;
+      --danger-border: #8a2828;
+      --danger-text: #f08080;
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .flag-bar { display: flex; height: 5px; }
+  .flag-r { flex: 1; background: var(--red); }
+  .flag-w { flex: 1; background: white; border-left: 0.5px solid #ccc; border-right: 0.5px solid #ccc; }
+  .hdr { background: var(--red); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+  .hdr-title { color: white; font-size: 20px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+  .hdr-sub { color: rgba(255,255,255,.8); font-size: 12px; margin-top: 3px; }
+  .hdr-right { text-align: right; color: white; }
+  .hdr-days { font-size: 28px; font-weight: 600; line-height: 1; }
+  .hdr-dlabel { font-size: 11px; opacity: .8; margin-top: 2px; }
+  .alert-bar { background: var(--warn-bg); border-bottom: 0.5px solid var(--warn-border); padding: 7px 20px; font-size: 11px; color: var(--warn-text); display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; padding: 16px 20px 0; }
+  @media (max-width: 600px) { .metrics { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .mcard { background: var(--bg2); border-radius: var(--radius); padding: 11px 13px; }
+  .mcard-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .mcard-val { font-size: 22px; font-weight: 600; color: var(--text); line-height: 1; }
+  .mcard-sub { font-size: 10px; color: var(--text3); margin-top: 3px; }
+  .tabs { display: flex; padding: 14px 20px 0; border-bottom: 0.5px solid var(--border); gap: 2px; overflow-x: auto; }
+  .tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 15px; cursor: pointer; font-size: 13px; color: var(--text2); white-space: nowrap; font-family: inherit; transition: color .15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { border-bottom-color: var(--red); color: var(--red); font-weight: 500; }
+  .content { padding: 16px 20px; display: none; }
+  .content.active { display: block; }
+  .success-bar { background: var(--success-bg); border: 0.5px solid var(--success-border); border-radius: var(--radius); padding: 10px 13px; margin-bottom: 14px; font-size: 12px; color: var(--success-text); display: flex; gap: 10px; align-items: flex-start; line-height: 1.5; }
+  .cand-row { border-radius: var(--radius); padding: 10px 13px; position: relative; overflow: hidden; margin-bottom: 8px; border: 0.5px solid var(--border); background: var(--bg); transition: opacity .15s; }
+  .cand-row.top { background: var(--bg); }
+  .cand-bg { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; }
+  .cand-inner { position: relative; display: flex; align-items: center; gap: 10px; }
+  .rank-circle { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+  .cand-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .cand-partido { font-size: 10px; color: var(--text3); }
+  .cand-pct { font-size: 18px; font-weight: 600; flex-shrink: 0; }
+  .cand-votos { font-size: 10px; color: var(--text2); text-align: right; }
+  .badge { font-size: 9px; padding: 2px 7px; border-radius: 20px; white-space: nowrap; font-weight: 600; flex-shrink: 0; }
+  .close-race { background: var(--danger-bg); border: 0.5px solid var(--danger-border); border-radius: var(--radius); padding: 11px 14px; margin-bottom: 8px; }
+  .cr-title { font-size: 12px; font-weight: 500; color: var(--danger-text); margin-bottom: 9px; }
+  .cr-bar-wrap { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+  .cr-label { font-size: 11px; font-weight: 500; width: 110px; text-align: right; flex-shrink: 0; }
+  .cr-bar-outer { flex: 1; height: 22px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .cr-bar-inner { height: 100%; border-radius: 3px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 10px; color: white; font-weight: 600; }
+  .cr-note { font-size: 10px; color: var(--danger-text); margin-top: 8px; text-align: center; }
+  .trend-wrap { position: relative; width: 100%; height: 300px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12px; color: var(--text2); }
+  .leg-item { display: flex; align-items: center; gap: 5px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .reg-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; }
+  .reg-card { background: var(--bg2); border-radius: var(--radius); padding: 10px 13px; border-left: 3px solid; }
+  .timeline-row { display: flex; gap: 13px; align-items: flex-start; margin-bottom: 16px; }
+  .tl-dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 2px; flex-shrink: 0; }
+  .tl-line { width: 1px; height: 28px; background: var(--border); margin: 3px auto 0; }
+  .sv-card { flex: 1; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 15px; text-align: center; }
+  .footnote { font-size: 10px; color: var(--text3); text-align: right; margin-top: 12px; }
+  .warn-note { background: var(--warn-bg); border: 0.5px solid var(--warn-border); border-radius: var(--radius); padding: 10px 13px; font-size: 12px; color: var(--warn-text); line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="flag-bar"><div class="flag-r"></div><div class="flag-w"></div><div class="flag-r"></div></div>
+
+<div class="hdr">
+  <div>
+    <div class="hdr-title">Perú Elige 2026</div>
+    <div class="hdr-sub">Monitoreo Electoral · Primera Vuelta 12–13 abr 2026</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-days" id="daysLeft">—</div>
+    <div class="hdr-dlabel">días para 2da vuelta</div>
+    <div class="hdr-dlabel">7 junio 2026</div>
+  </div>
+</div>
+
+<div class="alert-bar">
+  <span>ONPE: 93.35% actas procesadas</span>
+  <span>|</span>
+  <span>Diferencia 2°–3°: 8,617 votos</span>
+  <span>|</span>
+  <span>Pendiente JEE: ~5.99% actas observadas</span>
+  <span>|</span>
+  <span>Proclamación oficial: ~15 mayo · Segunda vuelta: 7 jun</span>
+</div>
+
+<div class="metrics">
+  <div class="mcard">
+    <div class="mcard-label">Padrón electoral</div>
+    <div class="mcard-val">27.2M</div>
+    <div class="mcard-sub">ciudadanos habilitados</div>
+  </div>
+  <div class="mcard">
+    <div class="mcard-label">Actas procesadas</div>
+    <div class="mcard-val">93.35%</div>
+    <div class="mcard-sub">conteo oficial ONPE</div>
+  </div>
+  <div class="mcard" style="border-left: 2px solid #E85A00">
+    <div class="mcard-label">Diferencia 2°–3°</div>
+    <div class="mcard-val" style="color:#E85A00">8,617</div>
+    <div class="mcard-sub">votos — carrera abierta</div>
+  </div>
+  <div class="mcard" style="border-left: 2px solid var(--red)">
+    <div class="mcard-label">Días · 2da vuelta</div>
+    <div class="mcard-val" id="daysCard" style="color:var(--red)">—</div>
+    <div class="mcard-sub">7 junio 2026</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('resultados',this)">Resultados</button>
+  <button class="tab" onclick="switchTab('tendencia',this)">Tendencia de conteo</button>
+  <button class="tab" onclick="switchTab('regiones',this)">Por región</button>
+  <button class="tab" onclick="switchTab('segunda',this)">Segunda Vuelta</button>
+</div>
+
+<div id="tab-resultados" class="content active">
+  <div class="success-bar">
+    <div style="width:8px;height:8px;border-radius:50%;background:var(--success-text);flex-shrink:0;margin-top:3px"></div>
+    <div><strong>Clasificados a 2da Vuelta:</strong> Keiko Fujimori (FP) y Roberto Sánchez (JxP) — diferencia con el 3° lugar es de solo 8,617 votos con ~6.65% de actas aún pendientes de proclamar por el JEE.</div>
+  </div>
+  <div id="cand-list"></div>
+  <div class="footnote">Fuente: ONPE — Conteo oficial al 93.354% de actas · 17 abr 2026 · 09:15 hrs</div>
+</div>
+
+<div id="tab-tendencia" class="content">
+  <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+    López Aliaga lideró el 2° puesto hasta el 88% de escrutinio. Los votos rurales del sur empujaron a Roberto Sánchez, quien lo superó en las últimas horas del conteo con un vuelco histórico.
+  </p>
+  <div class="trend-wrap">
+    <canvas id="trendChart" role="img" aria-label="Evolución del conteo electoral por porcentaje de actas procesadas"></canvas>
+  </div>
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:#F47B20"></div>Keiko Fujimori</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#DC2626"></div>Roberto Sánchez</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#1D4ED8"></div>López Aliaga</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#0D9488"></div>Jorge Nieto</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#D97706"></div>Ricardo Belmont</div>
+  </div>
+  <div class="footnote" style="margin-top:10px">Datos de evolución del conteo ONPE — primera vuelta 12–17 abr 2026</div>
+</div>
+
+<div id="tab-regiones" class="content">
+  <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+    Líderes regionales al 93.35% de actas. Fujimori domina norte y selva; Sánchez lidera sur andino; López Aliaga predomina en el voto exterior.
+  </p>
+  <div class="reg-grid" id="regGrid"></div>
+  <div class="footnote">Fuente: ONPE e Infobae · resultados por circunscripción al 17 abr 2026</div>
+</div>
+
+<div id="tab-segunda" class="content">
+  <div style="background:var(--bg2);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px">
+    <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:14px">Proyección: Segunda Vuelta — 7 junio 2026</div>
+    <div style="display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap">
+      <div class="sv-card" style="border-top:3px solid #F47B20">
+        <div style="font-size:24px;font-weight:700;color:#F47B20">KF</div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);margin-top:4px">Keiko Fujimori</div>
+        <div style="font-size:11px;color:var(--text2)">Fuerza Popular</div>
+        <div style="margin-top:10px;font-size:11px;color:var(--text3)">1ra vuelta: 17.07%</div>
+        <div style="margin-top:5px;font-size:11px;color:var(--text2)">Fortaleza: Norte, Selva, Costa</div>
+      </div>
+      <div style="display:flex;align-items:center;font-size:20px;font-weight:500;color:var(--text3)">vs</div>
+      <div class="sv-card" style="border-top:3px solid #DC2626">
+        <div style="font-size:24px;font-weight:700;color:#DC2626">RS</div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);margin-top:4px">Roberto Sánchez</div>
+        <div style="font-size:11px;color:var(--text2)">Juntos por el Perú</div>
+        <div style="margin-top:10px;font-size:11px;color:var(--text3)">1ra vuelta: 11.98%</div>
+        <div style="margin-top:5px;font-size:11px;color:var(--text2)">Fortaleza: Sur andino, Rural</div>
+      </div>
+    </div>
+    <div class="warn-note">
+      Pendiente confirmación: diferencia RLA–RS es de solo 8,617 votos al 93.35%. El JEE aún debe resolver ~5.99% de actas observadas/impugnadas. Proclamación oficial estimada para el 15 de mayo.
+    </div>
+  </div>
+  <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px">Cronograma Electoral</div>
+  <div id="timeline"></div>
+</div>
+
+<script>
+const CANDS = [
+  { name:"Keiko Fujimori", partido:"Fuerza Popular", pct:17.065, votos:2684105, color:"#F47B20", rank:1, segunda:true },
+  { name:"Roberto Sánchez", partido:"Juntos por el Perú", pct:11.982, votos:1884660, color:"#DC2626", rank:2, segunda:true },
+  { name:"Rafael López Aliaga", partido:"Renovación Popular", pct:11.927, votos:1876043, color:"#1D4ED8", rank:3, segunda:false, closeRace:true },
+  { name:"Jorge Nieto", partido:"Partido del Buen Gobierno", pct:11.071, votos:1741296, color:"#0D9488", rank:4, segunda:false },
+  { name:"Ricardo Belmont", partido:"Partido Cívico Obras", pct:10.156, votos:1597488, color:"#D97706", rank:5, segunda:false },
+  { name:"Carlos Álvarez", partido:"País Para Todos", pct:7.891, votos:1241197, color:"#7C3AED", rank:6, segunda:false },
+  { name:"Alfonso López Chau", partido:"Ahora Nación", pct:7.345, votos:1155333, color:"#DB2777", rank:7, segunda:false },
+  { name:"Marisol Pérez Tello", partido:"Primero la Gente", pct:3.433, votos:540026, color:"#6B7280", rank:8, segunda:false },
+  { name:"Carlos Espá", partido:"Partido Sicreo", pct:3.378, votos:531254, color:"#9CA3AF", rank:9, segunda:false },
+];
+
+const REGIONES = [
+  { region:"Tumbes", lider:"Keiko Fujimori", partido:"Fuerza Popular", pct:33.96, color:"#F47B20" },
+  { region:"Ucayali", lider:"Keiko Fujimori", partido:"Fuerza Popular", pct:29.53, color:"#F47B20" },
+  { region:"Loreto", lider:"Keiko Fujimori", partido:"Fuerza Popular", pct:28.13, color:"#F47B20" },
+  { region:"Piura", lider:"Keiko Fujimori", partido:"Fuerza Popular", pct:27.97, color:"#F47B20" },
+  { region:"Lambayeque", lider:"Keiko Fujimori", partido:"Fuerza Popular", pct:26.41, color:"#F47B20" },
+  { region:"La Libertad", lider:"Keiko Fujimori", partido:"Fuerza Popular", pct:21.5, color:"#F47B20" },
+  { region:"Callao", lider:"Keiko Fujimori", partido:"Fuerza Popular", pct:20.8, color:"#F47B20" },
+  { region:"Cusco", lider:"Roberto Sánchez", partido:"Juntos por el Perú", pct:22.0, color:"#DC2626" },
+  { region:"Puno", lider:"Roberto Sánchez", partido:"Juntos por el Perú", pct:19.5, color:"#DC2626" },
+  { region:"Ayacucho", lider:"Roberto Sánchez", partido:"Juntos por el Perú", pct:18.3, color:"#DC2626" },
+  { region:"Exterior", lider:"Rafael L. Aliaga", partido:"Renovación Popular", pct:25.96, color:"#1D4ED8" },
+  { region:"Arequipa", lider:"Ricardo Belmont", partido:"Partido Cívico Obras", pct:17.2, color:"#D97706" },
+];
+
+const TREND = [
+  { actas:"45%", KF:17.07, RS:5.8,  RLA:15.68, JN:13.0, RB:11.5 },
+  { actas:"60%", KF:17.00, RS:8.5,  RLA:14.50, JN:12.2, RB:11.2 },
+  { actas:"75%", KF:16.95, RS:10.5, RLA:13.20, JN:11.8, RB:10.8 },
+  { actas:"85%", KF:16.92, RS:11.50,RLA:12.30, JN:11.3, RB:10.5 },
+  { actas:"89%", KF:16.92, RS:11.97,RLA:11.95, JN:11.1, RB:10.3 },
+  { actas:"91%", KF:17.00, RS:12.07,RLA:11.85, JN:11.1, RB:10.2 },
+  { actas:"93%", KF:17.07, RS:12.00,RLA:11.93, JN:11.1, RB:10.2 },
+];
+
+const TIMELINE = [
+  { fecha:"12–13 abr 2026", evento:"Primera Vuelta Electoral", estado:"done" },
+  { fecha:"17 abr 2026",    evento:"Conteo ONPE al 93.35% — conteo en curso", estado:"now" },
+  { fecha:"~15 may 2026",   evento:"Proclamación oficial 1ra vuelta (JNE)", estado:"pending" },
+  { fecha:"7 jun 2026",     evento:"Segunda Vuelta Presidencial", estado:"pending" },
+  { fecha:"28 jul 2026",    evento:"Transmisión del mando presidencial", estado:"pending" },
+];
+
+// Days counter
+const secondRound = new Date('2026-06-07');
+const today = new Date('2026-04-17');
+const days = Math.ceil((secondRound - today) / 86400000);
+document.getElementById('daysLeft').textContent = days;
+document.getElementById('daysCard').textContent = days;
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'tendencia' && !trendBuilt) buildTrendChart();
+  if (id === 'regiones' && !document.getElementById('regGrid').children.length) buildRegGrid();
+  if (id === 'segunda' && !document.getElementById('timeline').children.length) buildTimeline();
+}
+
+// Candidates
+(function buildCands() {
+  const list = document.getElementById('cand-list');
+  CANDS.forEach((c, idx) => {
+    const row = document.createElement('div');
+    row.className = 'cand-row' + (c.segunda ? ' top' : '');
+    if (c.segunda) row.style.borderColor = c.color + '60';
+    const fill = document.createElement('div');
+    fill.className = 'cand-bg';
+    fill.style.width = ((c.pct / 18) * 100) + '%';
+    fill.style.background = c.color + '18';
+    row.appendChild(fill);
+    const inner = document.createElement('div');
+    inner.className = 'cand-inner';
+    inner.innerHTML = `
+      <div class="rank-circle" style="background:${c.segunda ? c.color : 'var(--bg3)'};color:${c.segunda ? '#fff' : 'var(--text2)'}">${c.rank}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+          <span class="cand-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
+          <span class="cand-pct" style="color:${c.color}">${c.pct.toFixed(3)}%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:2px">
+          <span class="cand-partido">${c.partido}</span>
+          <span class="cand-votos">${(c.votos/1000000).toFixed(3)}M votos</span>
+        </div>
+      </div>
+      ${c.segunda ? `<div class="badge" style="background:${c.color};color:white">2da vuelta</div>` : ''}
+      ${c.closeRace ? `<div class="badge" style="background:var(--danger-bg);color:var(--danger-text);border:0.5px solid var(--danger-border)">−8,617 v.</div>` : ''}
+    `;
+    row.appendChild(inner);
+    list.appendChild(row);
+
+    if (idx === 2) {
+      const cr = document.createElement('div');
+      cr.className = 'close-race';
+      cr.innerHTML = `
+        <div class="cr-title">Disputa por el 2° puesto — diferencia de 8,617 votos</div>
+        <div class="cr-bar-wrap">
+          <div class="cr-label" style="color:#DC2626">Roberto Sánchez</div>
+          <div class="cr-bar-outer">
+            <div class="cr-bar-inner" style="width:50.23%;background:#DC2626">11.98%</div>
+          </div>
+        </div>
+        <div class="cr-bar-wrap">
+          <div class="cr-label" style="color:#1D4ED8">López Aliaga</div>
+          <div class="cr-bar-outer">
+            <div class="cr-bar-inner" style="width:49.77%;background:#1D4ED8">11.93%</div>
+          </div>
+        </div>
+        <div class="cr-note">1,884,660 vs 1,876,043 votos · Diferencia: 8,617 · ~6.65% aún sin proclamar</div>
+      `;
+      list.appendChild(cr);
+    }
+  });
+})();
+
+let trendBuilt = false;
+function buildTrendChart() {
+  trendBuilt = true;
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: TREND.map(d => d.actas),
+      datasets: [
+        { label:'Keiko Fujimori',  data:TREND.map(d=>d.KF),  borderColor:'#F47B20', borderWidth:2.5, pointRadius:4, tension:.3, fill:false },
+        { label:'Roberto Sánchez', data:TREND.map(d=>d.RS),  borderColor:'#DC2626', borderWidth:2.5, pointRadius:4, tension:.3, fill:false, borderDash:[5,3] },
+        { label:'López Aliaga',    data:TREND.map(d=>d.RLA), borderColor:'#1D4ED8', borderWidth:2.5, pointRadius:4, tension:.3, fill:false, borderDash:[8,4] },
+        { label:'Jorge Nieto',     data:TREND.map(d=>d.JN),  borderColor:'#0D9488', borderWidth:1.5, pointRadius:3, tension:.3, fill:false, borderDash:[3,3] },
+        { label:'Ricardo Belmont', data:TREND.map(d=>d.RB),  borderColor:'#D97706', borderWidth:1.5, pointRadius:3, tension:.3, fill:false, borderDash:[3,3] },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false,backgroundColor:'rgba(0,0,0,.85)',titleFont:{size:11},bodyFont:{size:11}} },
+      scales:{
+        x:{ grid:{color:'rgba(128,128,128,.1)'}, ticks:{font:{size:11}} },
+        y:{ grid:{color:'rgba(128,128,128,.1)'}, min:4, max:19, ticks:{font:{size:11}, callback:v=>v+'%'}, title:{display:true,text:'% votos válidos',font:{size:10}} }
+      }
+    }
+  });
+}
+
+function buildRegGrid() {
+  const grid = document.getElementById('regGrid');
+  REGIONES.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'reg-card';
+    card.style.borderLeftColor = r.color;
+    card.innerHTML = `
+      <div style="font-size:11px;color:var(--text2)">${r.region}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px">
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--text)">${r.lider}</div>
+          <div style="font-size:10px;color:var(--text3)">${r.partido}</div>
+        </div>
+        <div style="font-size:16px;font-weight:600;color:${r.color}">${r.pct.toFixed(1)}%</div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function buildTimeline() {
+  const tl = document.getElementById('timeline');
+  TIMELINE.forEach((ev, i) => {
+    const isDone = ev.estado === 'done';
+    const isNow  = ev.estado === 'now';
+    const wrap = document.createElement('div');
+    wrap.className = 'timeline-row';
+    wrap.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+        <div class="tl-dot" style="background:${isDone?'#16a34a':isNow?'var(--red)':'var(--border2)'};${isNow?'box-shadow:0 0 0 3px rgba(217,16,35,.25)':''}"></div>
+        ${i<TIMELINE.length-1 ? '<div class="tl-line"></div>' : ''}
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3)">${ev.fecha}</div>
+        <div style="font-size:13px;font-weight:${isNow?'600':'400'};color:${isNow?'var(--red)':'var(--text)'};margin-top:2px">${ev.evento}</div>
+      </div>
+    `;
+    tl.appendChild(wrap);
+  });
+}
+</script>
+</body>
+</html>
